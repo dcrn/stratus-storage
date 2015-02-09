@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import os, git
+import os, git, shutil
 
 app = Flask(__name__)
 app.config.from_pyfile('config.cfg')
@@ -30,7 +30,7 @@ def file(user, repo, path):
 			return jsonify({}), 202 # Accepted
 		else:
 			# Make directories if necessary
-			os.makedirs(os.path.dirname(fullpath))
+			os.makedirs(os.path.dirname(fullpath), exist_ok=True)
 
 			with open(fullpath, 'w') as f:
 				f.write(request.data)
@@ -66,8 +66,6 @@ def tree(user, repo, subdir):
 		if localdir != '':
 			localpath = localdir.split('/')
 
-			print(localpath)
-
 		# Ignore .git directory unless specified as the subdirectory
 		if '.git' not in localpath:
 			wd = tree
@@ -85,12 +83,13 @@ def tree(user, repo, subdir):
 def status(user, repo):
 	root = app.config.get('STORAGE_ROOT')
 	basedir = root + '/' + user + '/' + repo
-
 	r = git.Repo(basedir)
+
+	# Get the diff of the last commit and the working directory
 	diffs = r.head.commit.diff(None)
 
+	# Iterate diffs and add them to a dictionary grouped by change type (Add, Modify, Delete, Rename, Untracked)
 	changes = {}
-
 	for ct in diffs.change_type:
 		changes[ct] = []
 		for diff in diffs.iter_change_type(ct):
@@ -108,21 +107,59 @@ def status(user, repo):
 @app.route('/<user>/<repo>/push')
 def push(user, repo):
 	access_token = request.args.get('access_token')
+	if access_token == None:
+		return jsonify({}), 403 # Forbidden
+
+	root = app.config.get('STORAGE_ROOT')
+	basedir = root + '/' + user + '/' + repo
+	r = git.Repo(basedir)
 	return ''
 
 @app.route('/<user>/<repo>/pull')
 def pull(user, repo):
 	access_token = request.args.get('access_token')
+	if access_token == None:
+		return jsonify({}), 403 # Forbidden
+
+	root = app.config.get('STORAGE_ROOT')
+	basedir = root + '/' + user + '/' + repo
+	r = git.Repo(basedir)
 	return ''
 
 @app.route('/<user>/<repo>/commit')
 def commit(user, repo):
 	access_token = request.args.get('access_token')
+	if access_token == None:
+		return jsonify({}), 403 # Forbidden
+
+	root = app.config.get('STORAGE_ROOT')
+	basedir = root + '/' + user + '/' + repo
+	r = git.Repo(basedir)
 	return ''
 
 @app.route('/<user>/<repo>/clone')
 def clone(user, repo):
 	access_token = request.args.get('access_token')
+	if access_token == None:
+		return jsonify({}), 403 # Forbidden
+
+	root = app.config.get('STORAGE_ROOT')
+	basedir = root + '/' + user + '/' + repo
+
+	# Remove any existing data
+	shutil.rmtree(basedir, ignore_errors=True)
+
+	# Make the repo
+	os.makedirs(basedir, exist_ok=True)
+	r = git.Repo.init(basedir, mkdir=False)
+
+	# Add remote with authentication
+	rem = r.create_remote('origin', 'https://' + user + ':' + access_token + '@github.com/' + user + '/' + repo + '.git')
+
+	# Pull existing data from GitHub
+	rem.fetch()
+	rem.pull(rem.refs[0].remote_head)
+
 	return ''
 
 if __name__ == '__main__':
