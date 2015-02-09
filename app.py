@@ -14,36 +14,36 @@ def file(user, repo, path):
 	isdir = os.path.isdir(fullpath)
 
 	if isdir:
-		return '{}', 403 # Forbidden
+		return jsonify({}), 403 # Forbidden
 
 	if request.method == 'GET':
 		if exists:
 			with open(fullpath) as f:
 				return jsonify({'data': f.read()})
 		else:
-			return '{}', 404 # Not found
+			return jsonify({}), 404 # Not found
 
 	elif request.method == 'PUT':
 		if exists:
 			with open(fullpath, 'w') as f:
 				f.write(request.data)
-			return '{}', 202 # Accepted
+			return jsonify({}), 202 # Accepted
 		else:
 			# Make directories if necessary
 			os.makedirs(os.path.dirname(fullpath))
 
 			with open(fullpath, 'w') as f:
 				f.write(request.data)
-			return '{}', 201 # Created
+			return jsonify({}), 201 # Created
 
 	elif request.method == 'DELETE':
 		if exists:
 			os.remove(fullpath)
-			return '{}', 202 # Accepted
+			return jsonify({}), 202 # Accepted
 		else:
-			return '{}', 404 # Not found
+			return jsonify({}), 404 # Not found
 
-	return '{}', 500 # Internal error
+	return jsonify({}), 500 # Internal error
 
 @app.route('/<user>/<repo>/tree', defaults={'subdir': ''})
 @app.route('/<user>/<repo>/tree/<path:subdir>')
@@ -55,7 +55,7 @@ def tree(user, repo, subdir):
 		basedir = basedir + '/' + subdir
 
 	if not os.path.exists(basedir):
-		return '{}', 404
+		return jsonify({}), 404
 
 	# Walk the directory and return JSON of tree
 	tree = {}
@@ -68,6 +68,7 @@ def tree(user, repo, subdir):
 
 			print(localpath)
 
+		# Ignore .git directory unless specified as the subdirectory
 		if '.git' not in localpath:
 			wd = tree
 			for i in localpath:
@@ -82,7 +83,27 @@ def tree(user, repo, subdir):
 # Git operations
 @app.route('/<user>/<repo>/status')
 def status(user, repo):
-	return ''
+	root = app.config.get('STORAGE_ROOT')
+	basedir = root + '/' + user + '/' + repo
+
+	r = git.Repo(basedir)
+	diffs = r.head.commit.diff(None)
+
+	changes = {}
+
+	for ct in diffs.change_type:
+		changes[ct] = []
+		for diff in diffs.iter_change_type(ct):
+			c = {}
+			if diff.a_blob:
+				c['A'] = diff.a_blob.path
+			if diff.b_blob:
+				c['B'] = diff.b_blob.path
+			changes[ct].append(c)
+
+	changes['U'] = r.untracked_files
+
+	return jsonify(changes)
 
 @app.route('/<user>/<repo>/push')
 def push(user, repo):
@@ -100,7 +121,7 @@ def commit(user, repo):
 	return ''
 
 @app.route('/<user>/<repo>/clone')
-def status(user, repo):
+def clone(user, repo):
 	access_token = request.args.get('access_token')
 	return ''
 
