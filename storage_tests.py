@@ -46,7 +46,7 @@ class StorageTestCase(unittest.TestCase):
 		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
 		test_remote_name = 'origin'
 		test_url_repo = self.username + '/' + self.repository
-		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name
 		test_url_file_a = test_url_repo + '/file/' + test_file_a
 		test_url_file_b = test_url_repo + '/file/' + test_file_b
 		test_url_status = test_url_repo + '/status'
@@ -124,7 +124,7 @@ class StorageTestCase(unittest.TestCase):
 		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
 		test_remote_name = 'origin'
 		test_url_repo = self.username + '/' + self.repository
-		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name
 		test_url_file_a = test_url_repo + '/file/' + test_file_a
 		test_url_file_b = test_url_repo + '/file/' + test_file_b
 		test_url_status = test_url_repo + '/status'
@@ -209,7 +209,7 @@ class StorageTestCase(unittest.TestCase):
 		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
 		test_remote_name = 'origin'
 		test_url_repo = self.username + '/' + self.repository
-		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name
 		test_url_file = test_url_repo + '/file/' + test_file
 
 		# Pull non-existant repo
@@ -261,8 +261,8 @@ class StorageTestCase(unittest.TestCase):
 		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
 		test_remote_name = 'origin'
 		test_url_repo = self.username + '/' + self.repository
-		test_url_push = test_url_repo + '/push/' + test_remote_name + '/master'
-		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_push = test_url_repo + '/push/' + test_remote_name
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name
 		test_url_file = test_url_repo + '/file/' + test_file
 
 		# Push non-existant repo

@@ -312,10 +312,10 @@ def status(user, repo):
 
 	return jsonify(changes)
 
-@app.route('/<user>/<repo>/push/<remote>/<branch>', methods=['GET'])
-def push(user, repo, remote, branch):
+@app.route('/<user>/<repo>/push/<remote>', methods=['GET'])
+def push(user, repo, remote):
 	"""
-		Performs a git push to the specified remote branch
+		Performs a git push to the specified remote
 		GET: Push the local changes to the remote server
 			Returns:
 				200 (OK)
@@ -333,15 +333,16 @@ def push(user, repo, remote, branch):
 
 	return ''
 
-@app.route('/<user>/<repo>/pull/<remote>/<branch>', methods=['GET'])
-def pull(user, repo, remote, branch):
+@app.route('/<user>/<repo>/pull/<remote>', methods=['GET'])
+def pull(user, repo, remote):
 	"""
-		Performs a git pull from remote branch
+		Performs a git pull from remote
 		GET: Pull the remote changes to the local repo
 			Returns:
 				200 (OK)
 				403 (Forbidden; remote doesn't exist)
 				404 (Not Found)
+				409 (Conflict; can't pull due to an error or rejected commit)
 	"""
 	root = app.config.get('STORAGE_ROOT')
 	basedir = root + '/' + user + '/' + repo
@@ -352,7 +353,26 @@ def pull(user, repo, remote, branch):
 	except (git.NoSuchPathError, git.InvalidGitRepositoryError):
 		return jsonify({}), 404 # Not Found
 
-	return ''
+	# Get remote
+	rem = r.remote(remote)
+
+	# Confirm remote exists
+	if rem.exists():
+		# Perform the pull command
+		result = rem.fetch()
+
+		# Check resulting info for errors or rejects
+		for info in result:
+			if info.flags & info.ERROR or info.flags & info.REJECTED:
+				return jsonify({}), 409 # Conflict
+
+		# Pull the fetched changes into the local HEAD
+		rem.pull(rem.refs[0].remote_head)
+
+		return jsonify({'notes': [x.note for x in result]}), 200 # OK
+	
+	# Invalid remote
+	return jsonify({}), 403 # Forbidden
 
 @app.route('/<user>/<repo>/commit', methods=['POST'])
 def commit(user, repo):
