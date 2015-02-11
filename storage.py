@@ -353,12 +353,13 @@ def commit(user, repo):
 				JSON object containing a list of files to
 					(A)dd or (R)emove and a commit message (msg).
 					e.g. {
-							'A': ['dir/hello.txt'],
+							'A': ['dir/hello.txt']
 							'R': ['foo.txt']
 							'msg': 'Added hello, removed foo'
 						}
 			Returns:
 				200 (OK)
+				400 (Bad Request; invalid or no JSON)
 				404 (Not Found)
 	"""
 	root = app.config.get('STORAGE_ROOT')
@@ -370,32 +371,6 @@ def commit(user, repo):
 	except (git.NoSuchPathError, git.InvalidGitRepositoryError):
 		return jsonify({}), 404 # Not Found
 
-	return ''
-
-@app.route('/<user>/<repo>/clone')
-def clone(user, repo):
-	"""
-	access_token = request.args.get('access_token')
-	if access_token == None:
-		return jsonify({}), 403 # Forbidden
-
-	root = app.config.get('STORAGE_ROOT')
-	basedir = root + '/' + user + '/' + repo
-
-	# Remove any existing data
-	shutil.rmtree(basedir, ignore_errors=True)
-
-	# Make the repo
-	os.makedirs(basedir, exist_ok=True)
-	r = git.Repo.init(basedir, mkdir=False)
-
-	# Add remote with authentication
-	rem = r.create_remote('origin', 'https://' + user + ':' + access_token + '@github.com/' + user + '/' + repo + '.git')
-
-	# Pull existing data from GitHub
-	rem.fetch()
-	rem.pull(rem.refs[0].remote_head)
-	"""
 	return ''
 
 if __name__ == '__main__':

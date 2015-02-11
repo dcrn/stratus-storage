@@ -1,4 +1,4 @@
-import storage, json, unittest
+import storage, json, unittest, time, random, string
 
 class StorageTestCase(unittest.TestCase):
 	def setUp(self):
@@ -39,79 +39,233 @@ class StorageTestCase(unittest.TestCase):
 		re = self.app.get(test_url)
 		assert re.status_code == 404 # Not Found
 
-	def test_git_clone(self):
-		test_url_repo = self.username + '/' + self.repository
-		test_url_clone = test_url_repo + '/clone'
-		test_remote = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
+	def test_git_status(self):
+		test_file_a = 'hello.txt'
+		test_file_b = 'README.md'
+		test_data = 'foobar'
+		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
 		test_remote_name = 'origin'
+		test_url_repo = self.username + '/' + self.repository
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_file_a = test_url_repo + '/file/' + test_file_a
+		test_url_file_b = test_url_repo + '/file/' + test_file_b
+		test_url_status = test_url_repo + '/status'
 
-		"""
-		# Create repo
+		# Init local repo with remote
 		re = self.app.post(test_url_repo, 
-			data=json.dumps({
-					test_remote_name: test_remote
-				})
-			)
+			data=json.dumps({test_remote_name: test_remote_url}))
 		assert re.status_code == 201 # Created
 
-		# Clone
-		re = self.app.get(test_url_clone, 
-			args={'access_token': self.access_token})
-		assert re.status_code == 200
-		"""
+		# Get status before pull
+		re = self.app.get(test_url_status)
+		assert re.status_code == 403 # Forbidden
 
-	def test_git_status(self):
-		pass
+		# Pull repo
+		re = self.app.get(test_url_pull)
+		assert re.status_code == 200 # OK
+		
+		# Check status, should have no changes
+		re = self.app.get(test_url_status)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j == {'R': [], 'U': [], 'M': [], 'A': [], 'D': []}
+
+		# Create test file
+		re = self.app.post(test_url_file_a,
+			data=json.dumps({'data': test_data}))
+		assert re.status_code == 201 # Created
+
+		# Should now have 1 untracked file
+		re = self.app.get(test_url_status)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j == {'R': [], 'U': [test_file_a], 'M': [], 'A': [], 'D': []}
+
+		# Change contents of README.md
+		re = self.app.put(test_url_file_b,
+			data=json.dumps({'data': test_data}))
+		assert re.status_code == 200 # OK
+
+		# Check that README.md is modified
+		re = self.app.get(test_url_status)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j == {'R': [], 'U': [test_file_a], 'M': [test_file_b], 'A': [], 'D': []}
+
+		# Delete README.md
+		self.app.delete(test_url_file_b)
+		assert re.status_code == 200 # OK
+
+		# Check deleted status
+		re = self.app.get(test_url_status)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j == {'R': [], 'U': [test_file_a], 'D': [test_file_b], 'A': [], 'M': []}
+
+		# Delete test repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200 # OK
 
 	def test_git_commit(self):
 		pass
 
 	def test_git_pull(self):
-		pass
+		test_file = 'README.md' # Already in repo
+		test_data = 'hello world\n' # Contents of test_file_a
+		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
+		test_remote_name = 'origin'
+		test_url_repo = self.username + '/' + self.repository
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_file = test_url_repo + '/file/' + test_file
+
+		# Pull non-existant repo
+		re = self.app.get(test_url_pull)
+		assert re.status_code == 404 # Not Found
+
+		# Init local repo with remote
+		re = self.app.post(test_url_repo, 
+			data=json.dumps({test_remote_name: test_remote_url}))
+		assert re.status_code == 201 # Created
+
+		# Attempt to pull the repo
+		re = self.app.get(test_url_pull)
+		assert re.status_code == 200 # OK
+
+		# Confirm the contents of the repo
+		re = self.app.get(test_url_file)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j['data'] == test_data
+
+		# Delete test repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200 # OK
 
 	def test_git_push(self):
-		pass
+		filename_len = 14
+		filedata_len = 32
+
+		# Generate random data to be pushed
+		test_file = ('').join(random.choice(string.ascii_lowercase) for n in range(filename_len)) + '.txt'
+		test_data = ('').join(random.choice(string.ascii_lowercase) for n in range(filedata_len))
+
+		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
+		test_remote_name = 'origin'
+		test_url_repo = self.username + '/' + self.repository
+		test_url_push = test_url_repo + '/push/' + test_remote_name + '/master'
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_file = test_url_repo + '/file/' + test_file
+
+		# Push non-existant repo
+		re = self.app.get(test_url_push)
+		assert re.status_code == 404 # Not Found
+
+		# Init local repo with remote
+		re = self.app.post(test_url_repo, 
+			data=json.dumps({test_remote_name: test_remote_url}))
+		assert re.status_code == 201 # Created
+
+		# Pull the repo
+		re = self.app.get(test_url_pull)
+		assert re.status_code == 200 # OK
+
+		# Add new file
+		re = self.app.post(test_url_file, 
+			data=json.dumps({'data':test_data}))
+		assert re.status_code == 201 # Created
+
+		# Commit file
+		re = self.app.post(test_url_commit, 
+			data=json.dumps({
+					'A': [test_file],
+					'R': [],
+					'msg': 'Unittest ' + time.strftime("%c")
+				}))
+		assert re.status_code == 200 # OK
+
+		# Push the commit
+		re = self.app.get(test_url_push)
+		assert re.status_code == 200 # OK
+
+		# Delete test repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200 # OK
+
+		# Init local repo with remote
+		re = self.app.post(test_url_repo, 
+			data=json.dumps({test_remote_name: test_remote_url}))
+		assert re.status_code == 201 # Created
+
+		# Pull the repo
+		re = self.app.get(test_url_pull)
+		assert re.status_code == 200 # OK
+
+		# Confirm the contents of the repo
+		re = self.app.get(test_url_file)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j['data'] == test_data
+
+		# Delete test repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200 # OK
 		
 	def test_file(self):
-		test_url = self.username + '/' + self.repository + '/file/test.txt'
+		test_file = 'test.txt'
 		test_data_a = 'Testing 123'
 		test_data_b = 'foobar'
+		test_url_repo = self.username + '/' + self.repository
+		test_url_file = self.username + '/' + self.repository + '/file/' + test_file
+
+		# Init local testing repo
+		re = self.app.post(test_url_repo, data='{}')
+		assert re.status_code == 201 # Created
 
 		# Get non-existant file
-		re = self.app.get(test_url)
+		re = self.app.get(test_url_file)
 		assert re.status_code == 404
 
 		# Create new file without submitting any data
-		re = self.app.post(test_url)
+		re = self.app.post(test_url_file)
 		assert re.status_code == 400
 
 		# Create new file
-		re = self.app.post(test_url, 
+		re = self.app.post(test_url_file, 
 			data=json.dumps({'data':test_data_a}))
 		assert re.status_code == 201
 
 		# Confirm data stored in file
-		re = self.app.get(test_url)
+		re = self.app.get(test_url_file)
 		assert re.status_code == 200
 		assert json.loads(str(re.data, 'utf-8'))['data'] == test_data_a
 
 		# Update file
-		re = self.app.put(test_url, 
+		re = self.app.put(test_url_file, 
 			data=json.dumps({'data':test_data_b}))
 		assert re.status_code == 200
 
 		# Confirm file updated
-		re = self.app.get(test_url)
+		re = self.app.get(test_url_file)
 		assert re.status_code == 200
 		assert json.loads(str(re.data, 'utf-8'))['data'] == test_data_b
 
 		# Delete file
-		re = self.app.delete(test_url)
+		re = self.app.delete(test_url_file)
 		assert re.status_code == 200
 
 		# Confirm deleted
-		re = self.app.get(test_url)
+		re = self.app.get(test_url_file)
 		assert re.status_code == 404
+
+		# Delete test repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200 # OK
 		
 	def test_tree(self):
 		test_filename = 'test.txt'
@@ -150,7 +304,6 @@ class StorageTestCase(unittest.TestCase):
 		re = self.app.delete(test_url_repo)
 		assert re.status_code == 200 # OK
 
-		
 
 if __name__ == '__main__':
 	unittest.main()
