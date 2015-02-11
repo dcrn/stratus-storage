@@ -29,7 +29,7 @@ class StorageTestCase(unittest.TestCase):
 		re = self.app.get(test_url)
 		assert re.status_code == 200
 		j = json.loads(str(re.data, 'utf-8'))
-		assert j[test_remote_name] == test_remote
+		assert j['remotes'][test_remote_name] == test_remote
 
 		# Delete repo
 		re = self.app.delete(test_url)
@@ -134,9 +134,25 @@ class StorageTestCase(unittest.TestCase):
 			data=json.dumps({test_remote_name: test_remote_url}))
 		assert re.status_code == 201 # Created
 
+		# Get repo info, make sure head is null
+		re = self.app.get(test_url_repo)
+		assert re.status_code == 201 # Created
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j['head'] == None
+		assert j['remotes'][test_remote_name] == test_remote_url
+
 		# Pull repo
 		re = self.app.get(test_url_pull)
 		assert re.status_code == 200 # OK
+
+		# Get head commit hash
+		re = self.app.get(test_url_repo)
+		assert re.status_code == 201 # Created
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j['head'] ~= None
+		head = j['head']
 
 		# Add a new file 'hello.txt'
 		re = self.app.post(test_url_file_a, 
@@ -167,6 +183,13 @@ class StorageTestCase(unittest.TestCase):
 					'msg': 'Unittest ' + time.strftime("%c")
 				}))
 		assert re.status_code == 200 # OK
+
+		# Confirm head changed
+		re = self.app.get(test_url_repo)
+		assert re.status_code == 201 # Created
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j['head'] ~= head
 		
 		# Check status, should have no changes
 		re = self.app.get(test_url_status)
@@ -198,9 +221,23 @@ class StorageTestCase(unittest.TestCase):
 			data=json.dumps({test_remote_name: test_remote_url}))
 		assert re.status_code == 201 # Created
 
+		# Get repo info
+		re = self.app.get(test_url_repo)
+		assert re.status_code == 201 # Created
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j['head'] == None
+
 		# Attempt to pull the repo
 		re = self.app.get(test_url_pull)
 		assert re.status_code == 200 # OK
+
+		# Confirm that the head ref changed
+		re = self.app.get(test_url_repo)
+		assert re.status_code == 201 # Created
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j['head'] ~= None
 
 		# Confirm the contents of the repo
 		re = self.app.get(test_url_file)

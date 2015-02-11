@@ -155,7 +155,8 @@ def repository(user, repo):
 
 		GET: Returns the remotes of a Repository
 			Returns: 
-					200 (OK) + JSON containing remotes
+					200 (OK) + JSON containing head commit SHA and remotes
+						e.g. {'head': 'abc123', 'remotes': {'origin':'https://'}}
 					404 (Not Found)
 		POST: Initializes a new local repository
 			Data: JSON object with remote URLs {remote_name: 'remote_url'}
@@ -187,8 +188,16 @@ def repository(user, repo):
 		except (git.NoSuchPathError, git.InvalidGitRepositoryError):
 			return jsonify({}), 404 # Not Found
 
+		commit = None
+		if r.head.is_valid():
+			commit = r.head.commit.hexsha
+		remotes = {x.name: x.url for x in r.remotes}
+
 		# Return list of remotes
-		return jsonify({x.name: x.url for x in r.remotes})
+		return jsonify({
+			'head': commit,
+			'remotes': remotes
+			})
 	elif request.method == 'POST':
 		# Check if repo already exists
 		try:
