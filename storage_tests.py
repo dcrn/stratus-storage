@@ -27,8 +27,8 @@ class StorageTestCase(unittest.TestCase):
 
 		# Confirm repo exists
 		re = self.app.get(test_url)
-		j = json.loads(str(re.data, 'utf-8'))
 		assert re.status_code == 200
+		j = json.loads(str(re.data, 'utf-8'))
 		assert j[test_remote_name] == test_remote
 
 		# Delete repo
@@ -114,15 +114,43 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 404
 		
 	def test_tree(self):
+		test_filename = 'test.txt'
+		test_subdir = 'subdir'
+		test_data = 'Hello world'
 		test_url_repo = self.username + '/' + self.repository
 		test_url_tree = test_url_repo + '/tree'
+		test_url_file_a = test_url_repo + '/file/' + test_filename
+		test_url_file_b = test_url_repo + '/file/' + test_subdir + '/' + test_filename
 
-		"""
-		# Get tree of repo
-		re = self.app.get(test_url)
+		# Init local testing repo
+		re = self.app.post(test_url_repo, data='{}')
+		assert re.status_code == 201 # Created
+
+		# Confirm tree is empty
+		re = self.app.get(test_url_tree)
+		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert len(j) == 0
-		"""
+
+		# Create new files
+		re = self.app.post(test_url_file_a, data=json.dumps({'data': test_data}))
+		assert re.status_code == 201 # Created
+		re = self.app.post(test_url_file_b, data=json.dumps({'data': test_data}))
+		assert re.status_code == 201 # Created
+
+		# Confirm tree contains new file
+		re = self.app.get(test_url_tree)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert len(j) == 2
+		assert j[test_filename] == True
+		assert j[test_subdir][test_filename] == True
+
+		# Delete test repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200 # OK
+
+		
 
 if __name__ == '__main__':
 	unittest.main()
