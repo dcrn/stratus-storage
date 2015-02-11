@@ -1,3 +1,3 @@
 #!/bin/bash
 source venv/bin/activate
-python storage.py
+python storage_tests.py
