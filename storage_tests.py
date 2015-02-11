@@ -40,7 +40,7 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 404 # Not Found
 
 	def test_git_status(self):
-		test_file_a = 'hello.txt'
+		test_file_a = 'subdir/hello.txt'
 		test_file_b = 'README.md'
 		test_data = 'foobar'
 		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
@@ -81,7 +81,9 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
-		assert j == {'R': [], 'U': [test_file_a], 'M': [], 'A': [], 'D': []}
+		assert j == {
+			'R': [], 'U': [test_file_a], 
+			'M': [], 'A': [], 'D': []}
 
 		# Change contents of README.md
 		re = self.app.put(test_url_file_b,
@@ -93,7 +95,10 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
-		assert j == {'R': [], 'U': [test_file_a], 'M': [test_file_b], 'A': [], 'D': []}
+		assert j == {
+			'R': [], 'U': [test_file_a], 
+			'M': [{'A': test_file_b, 'B': test_file_b}],
+			'A': [], 'D': []}
 
 		# Delete README.md
 		self.app.delete(test_url_file_b)
@@ -104,14 +109,76 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
-		assert j == {'R': [], 'U': [test_file_a], 'D': [test_file_b], 'A': [], 'M': []}
+		assert j == {
+			'R': [], 'U': [test_file_a], 'M': [],
+			'A': [], 'D': [{'A': test_file_b}]}
 
 		# Delete test repo
 		re = self.app.delete(test_url_repo)
 		assert re.status_code == 200 # OK
 
 	def test_git_commit(self):
-		pass
+		test_file_a = 'subdir/hello.txt'
+		test_file_b = 'README.md'
+		test_data = 'foobar'
+		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
+		test_remote_name = 'origin'
+		test_url_repo = self.username + '/' + self.repository
+		test_url_pull = test_url_repo + '/pull/' + test_remote_name + '/master'
+		test_url_file_a = test_url_repo + '/file/' + test_file_a
+		test_url_file_b = test_url_repo + '/file/' + test_file_b
+		test_url_status = test_url_repo + '/status'
+
+		# Init local repo with remote
+		re = self.app.post(test_url_repo, 
+			data=json.dumps({test_remote_name: test_remote_url}))
+		assert re.status_code == 201 # Created
+
+		# Pull repo
+		re = self.app.get(test_url_pull)
+		assert re.status_code == 200 # OK
+
+		# Add a new file 'hello.txt'
+		re = self.app.post(test_url_file_a, 
+			data=json.dumps({'data': test_data}))
+		assert re.status_code == 200 # OK
+
+		# Modify README.md
+		re = self.app.put(test_url_file_b, 
+			data=json.dumps({'data': test_data}))
+		assert re.status_code == 200 # OK
+
+		# Get status, file_a should be untracked and 
+		# file_b should be modified
+		re = self.app.get(test_url_status)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j == {
+			'R': [], 'U': [test_file_a], 
+			'M': [{'A': test_file_b, 'B': test_file_b}],
+			'A': [], 'D': []}
+
+		# Commit files
+		re = self.app.post(test_url_commit,
+			data=json.loads({
+					'A': [test_file_a, test_file_b], 
+					'R': [], 
+					'msg': 'Unittest ' + time.strftime("%c")
+				}))
+		assert re.status_code == 200 # OK
+		
+		# Check status, should have no changes
+		re = self.app.get(test_url_status)
+		assert re.status_code == 200 # OK
+		j = json.loads(str(re.data, 'utf-8'))
+		assert j
+		assert j == {'R': [], 'U': [], 'M': [], 'A': [], 'D': []}
+
+		# Delete test repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200 # OK
+
 
 	def test_git_pull(self):
 		test_file = 'README.md' # Already in repo

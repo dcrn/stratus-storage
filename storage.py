@@ -265,6 +265,9 @@ def status(user, repo):
 				200 (OK) + JSON object consisting of modified filenames 
 					grouped by Addition (A), Modification (M), 
 					Deletion (D), Rename (R) and Untracked (U).
+					Addition, Modification, Deletion and Renames have 
+					an A and B file, for renames A -> B, etc. Untracked
+					files are just a list of filenames.
 				403 (Forbidden) No baseline commit to diff with
 				404 (Not Found)
 	"""
