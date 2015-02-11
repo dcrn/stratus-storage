@@ -47,7 +47,7 @@ def file(user, repo, path):
 	if request.method == 'GET':
 		if exists:
 			try:
-				with open(fullpath) as f:
+				with open(fullpath, 'r') as f:
 					return jsonify({'data': f.read()})
 			except Exception as e:
 				return jsonify({}), 500 # Internal error
@@ -89,7 +89,6 @@ def file(user, repo, path):
 				f.write(json['data'])
 		except Exception as e:
 			return jsonify({}), 500 # Internal error
-
 		return jsonify({}), 201 # Created
 
 	elif request.method == 'DELETE':
@@ -321,6 +320,7 @@ def push(user, repo, remote):
 				200 (OK)
 				403 (Forbidden; remote doesn't exist)
 				404 (Not Found)
+				409 (Conflict; conflict while pushing)
 	"""
 	root = app.config.get('STORAGE_ROOT')
 	basedir = root + '/' + user + '/' + repo
@@ -331,7 +331,23 @@ def push(user, repo, remote):
 	except (git.NoSuchPathError, git.InvalidGitRepositoryError):
 		return jsonify({}), 404 # Not Found
 
-	return ''
+	# Get specified remote
+	rem = r.remote(remote)
+
+	# Confirm remote exists
+	if rem.exists():
+		# Perform the push command
+		result = rem.push(r.head.reference)
+		for info in result:
+			if info.flags & info.ERROR or info.flags & info.REJECTED:
+				return jsonify({}), 409 # Conflict
+
+		return jsonify({}), 200 # OK
+
+
+
+	# Invalid remote
+	return jsonify({}), 403 # Forbidden
 
 @app.route('/<user>/<repo>/pull/<remote>', methods=['POST'])
 def pull(user, repo, remote):
@@ -419,9 +435,9 @@ def commit(user, repo):
 		except FileNotFoundError:
 			return jsonify({}), 404 # Not Found
 
-	sha = r.index.commit(j['msg']) # Set author / committer?
+	commit = r.index.commit(j['msg']) # Set author / committer?
 
-	return jsonify({'sha': sha}), 200 # OK
+	return jsonify({'commit': commit.hexsha}), 200 # OK
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', debug=True)

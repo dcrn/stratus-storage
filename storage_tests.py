@@ -13,6 +13,10 @@ class StorageTestCase(unittest.TestCase):
 		test_remote = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
 		test_remote_name = 'origin'
 
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url)
+		assert re.status_code in [200, 404]
+
 		# Check repo doesn't exist
 		re = self.app.get(test_url)
 		assert re.status_code == 404 # Not Found
@@ -50,6 +54,10 @@ class StorageTestCase(unittest.TestCase):
 		test_url_file_a = test_url_repo + '/file/' + test_file_a
 		test_url_file_b = test_url_repo + '/file/' + test_file_b
 		test_url_status = test_url_repo + '/status'
+
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url_repo)
+		assert re.status_code in [200, 404]
 
 		# Init local repo with remote
 		re = self.app.post(test_url_repo, 
@@ -125,9 +133,14 @@ class StorageTestCase(unittest.TestCase):
 		test_remote_name = 'origin'
 		test_url_repo = self.username + '/' + self.repository
 		test_url_pull = test_url_repo + '/pull/' + test_remote_name
+		test_url_commit = test_url_repo + '/commit'
 		test_url_file_a = test_url_repo + '/file/' + test_file_a
 		test_url_file_b = test_url_repo + '/file/' + test_file_b
 		test_url_status = test_url_repo + '/status'
+
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url_repo)
+		assert re.status_code in [200, 404]
 
 		# Init local repo with remote
 		re = self.app.post(test_url_repo, 
@@ -136,7 +149,7 @@ class StorageTestCase(unittest.TestCase):
 
 		# Get repo info, make sure head is null
 		re = self.app.get(test_url_repo)
-		assert re.status_code == 201 # Created
+		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
 		assert j['head'] == None
@@ -148,16 +161,16 @@ class StorageTestCase(unittest.TestCase):
 
 		# Get head commit hash
 		re = self.app.get(test_url_repo)
-		assert re.status_code == 201 # Created
+		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
-		assert j['head'] ~= None
+		assert j['head'] is not None
 		head = j['head']
 
 		# Add a new file 'hello.txt'
 		re = self.app.post(test_url_file_a, 
 			data=json.dumps({'data': test_data}))
-		assert re.status_code == 200 # OK
+		assert re.status_code == 201 # Created
 
 		# Modify README.md
 		re = self.app.put(test_url_file_b, 
@@ -177,7 +190,7 @@ class StorageTestCase(unittest.TestCase):
 
 		# Commit files
 		re = self.app.post(test_url_commit,
-			data=json.loads({
+			data=json.dumps({
 					'A': [test_file_a, test_file_b], 
 					'R': [], 
 					'msg': 'Unittest ' + time.strftime("%c")
@@ -186,10 +199,10 @@ class StorageTestCase(unittest.TestCase):
 
 		# Confirm head changed
 		re = self.app.get(test_url_repo)
-		assert re.status_code == 201 # Created
+		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
-		assert j['head'] ~= head
+		assert j['head'] is not head
 		
 		# Check status, should have no changes
 		re = self.app.get(test_url_status)
@@ -212,6 +225,10 @@ class StorageTestCase(unittest.TestCase):
 		test_url_pull = test_url_repo + '/pull/' + test_remote_name
 		test_url_file = test_url_repo + '/file/' + test_file
 
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url_repo)
+		assert re.status_code in [200, 404]
+
 		# Pull non-existant repo
 		re = self.app.post(test_url_pull)
 		assert re.status_code == 404 # Not Found
@@ -223,7 +240,7 @@ class StorageTestCase(unittest.TestCase):
 
 		# Get repo info
 		re = self.app.get(test_url_repo)
-		assert re.status_code == 201 # Created
+		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
 		assert j['head'] == None
@@ -234,10 +251,10 @@ class StorageTestCase(unittest.TestCase):
 
 		# Confirm that the head ref changed
 		re = self.app.get(test_url_repo)
-		assert re.status_code == 201 # Created
+		assert re.status_code == 200 # OK
 		j = json.loads(str(re.data, 'utf-8'))
 		assert j
-		assert j['head'] ~= None
+		assert j['head'] is not None
 
 		# Confirm the contents of the repo
 		re = self.app.get(test_url_file)
@@ -264,6 +281,11 @@ class StorageTestCase(unittest.TestCase):
 		test_url_push = test_url_repo + '/push/' + test_remote_name
 		test_url_pull = test_url_repo + '/pull/' + test_remote_name
 		test_url_file = test_url_repo + '/file/' + test_file
+		test_url_commit = test_url_repo + '/commit'
+
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url_repo)
+		assert re.status_code in [200, 404]
 
 		# Push non-existant repo
 		re = self.app.post(test_url_push)
@@ -293,7 +315,7 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 200 # OK
 
 		# Push the commit
-		re = self.app.get(test_url_push)
+		re = self.app.post(test_url_push)
 		assert re.status_code == 200 # OK
 
 		# Delete test repo
@@ -306,7 +328,7 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 201 # Created
 
 		# Pull the repo
-		re = self.app.get(test_url_pull)
+		re = self.app.post(test_url_pull)
 		assert re.status_code == 200 # OK
 
 		# Confirm the contents of the repo
@@ -326,6 +348,10 @@ class StorageTestCase(unittest.TestCase):
 		test_data_b = 'foobar'
 		test_url_repo = self.username + '/' + self.repository
 		test_url_file = self.username + '/' + self.repository + '/file/' + test_file
+
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url_repo)
+		assert re.status_code in [200, 404]
 
 		# Init local testing repo
 		re = self.app.post(test_url_repo, data='{}')
@@ -379,6 +405,10 @@ class StorageTestCase(unittest.TestCase):
 		test_url_tree = test_url_repo + '/tree'
 		test_url_file_a = test_url_repo + '/file/' + test_filename
 		test_url_file_b = test_url_repo + '/file/' + test_subdir + '/' + test_filename
+
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url_repo)
+		assert re.status_code in [200, 404]
 
 		# Init local testing repo
 		re = self.app.post(test_url_repo, data='{}')
