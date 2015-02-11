@@ -312,11 +312,11 @@ def status(user, repo):
 
 	return jsonify(changes)
 
-@app.route('/<user>/<repo>/push/<remote>', methods=['GET'])
+@app.route('/<user>/<repo>/push/<remote>', methods=['POST'])
 def push(user, repo, remote):
 	"""
 		Performs a git push to the specified remote
-		GET: Push the local changes to the remote server
+		POST: Push the local changes to the remote server
 			Returns:
 				200 (OK)
 				403 (Forbidden; remote doesn't exist)
@@ -333,11 +333,11 @@ def push(user, repo, remote):
 
 	return ''
 
-@app.route('/<user>/<repo>/pull/<remote>', methods=['GET'])
+@app.route('/<user>/<repo>/pull/<remote>', methods=['POST'])
 def pull(user, repo, remote):
 	"""
 		Performs a git pull from remote
-		GET: Pull the remote changes to the local repo
+		POST: Pull the remote changes to the local repo
 			Returns:
 				200 (OK)
 				403 (Forbidden; remote doesn't exist)

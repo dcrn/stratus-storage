@@ -61,7 +61,7 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 403 # Forbidden
 
 		# Pull repo
-		re = self.app.get(test_url_pull)
+		re = self.app.post(test_url_pull)
 		assert re.status_code == 200 # OK
 		
 		# Check status, should have no changes
@@ -143,7 +143,7 @@ class StorageTestCase(unittest.TestCase):
 		assert j['remotes'][test_remote_name] == test_remote_url
 
 		# Pull repo
-		re = self.app.get(test_url_pull)
+		re = self.app.post(test_url_pull)
 		assert re.status_code == 200 # OK
 
 		# Get head commit hash
@@ -213,7 +213,7 @@ class StorageTestCase(unittest.TestCase):
 		test_url_file = test_url_repo + '/file/' + test_file
 
 		# Pull non-existant repo
-		re = self.app.get(test_url_pull)
+		re = self.app.post(test_url_pull)
 		assert re.status_code == 404 # Not Found
 
 		# Init local repo with remote
@@ -229,7 +229,7 @@ class StorageTestCase(unittest.TestCase):
 		assert j['head'] == None
 
 		# Attempt to pull the repo
-		re = self.app.get(test_url_pull)
+		re = self.app.post(test_url_pull)
 		assert re.status_code == 200 # OK
 
 		# Confirm that the head ref changed
@@ -266,7 +266,7 @@ class StorageTestCase(unittest.TestCase):
 		test_url_file = test_url_repo + '/file/' + test_file
 
 		# Push non-existant repo
-		re = self.app.get(test_url_push)
+		re = self.app.post(test_url_push)
 		assert re.status_code == 404 # Not Found
 
 		# Init local repo with remote
@@ -275,7 +275,7 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 201 # Created
 
 		# Pull the repo
-		re = self.app.get(test_url_pull)
+		re = self.app.post(test_url_pull)
 		assert re.status_code == 200 # OK
 
 		# Add new file
