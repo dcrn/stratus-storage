@@ -403,7 +403,25 @@ def commit(user, repo):
 	except (git.NoSuchPathError, git.InvalidGitRepositoryError):
 		return jsonify({}), 404 # Not Found
 
-	return ''
+	# Get json
+	j = request.get_json(force=True, silent=True)
+	if j is None or 'A' not in j or 'R' not in j or 'msg' not in j:
+		return jsonify({}), 400 # Bad request
+
+	if len(j['A']) > 0:
+		try:
+			r.index.add(j['A'])
+		except FileNotFoundError:
+			return jsonify({}), 404 # Not Found
+	if len(j['R']) > 0:
+		try:
+			r.index.remove(j['R'])
+		except FileNotFoundError:
+			return jsonify({}), 404 # Not Found
+
+	sha = r.index.commit(j['msg']) # Set author / committer?
+
+	return jsonify({'sha': sha}), 200 # OK
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', debug=True)
