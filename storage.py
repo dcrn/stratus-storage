@@ -149,9 +149,10 @@ def tree(user, repo, subdir):
 def list(user):
 	"""
 		Get a list of all repos on the server 
-			for this user
+			for this user, with the number of commits 
+			ahead of the remote repo
 		GET: Returns the list of repos as a dictionary: 
-				{reponame: true}
+				{reponame: 'ahead/behind'}
 			Returns:
 				200 (OK) + JSON
 				404 (Not Found)
@@ -163,7 +164,31 @@ def list(user):
 	if not os.path.exists(basedir):
 		return jsonify({}), 404
 	else:
-		return jsonify({x:True for x in os.listdir(basedir)}), 200
+		repos = {}
+		dirs = os.listdir(basedir)
+		for d in dirs:
+			r = None
+			try:
+				r = git.Repo(basedir + '/' + d)
+				repos[d] = 0
+				if (len(r.remotes) > 0):
+					remote = r.remotes[0]
+
+					if r.head.is_valid(): # Commit exists
+						try:
+							remote.refs
+						except AssertionError:
+							# Remotes without references mean that the 
+							#	remote has no initial commit
+							repos[d] = 1
+						else:
+							repos[d] = len(
+								[1 for x in r.iter_commits(remote.name+'/master..')]
+							)
+
+			except (git.NoSuchPathError, git.InvalidGitRepositoryError):
+				pass
+		return jsonify(repos), 200
 
 @app.route('/<user>/<repo>', 
 	methods=['GET', 'PUT', 'POST', 'DELETE'])
@@ -309,8 +334,8 @@ def status(user, repo):
 	except (git.NoSuchPathError, git.InvalidGitRepositoryError):
 		return jsonify({}), 404 # Not Found
 
-	if not r.head.is_valid():
-		return jsonify({}), 403 # Forbidden
+	if not r.head.is_valid(): # No commit. Get untracked files only
+		return jsonify({'U': r.untracked_files})
 
 	# Get the diff of the last commit and the working directory
 	diffs = r.head.commit.diff(None)
@@ -403,7 +428,10 @@ def pull(user, repo, remote):
 				return jsonify({}), 409 # Conflict
 
 		# Pull the fetched changes into the local HEAD
-		rem.pull(rem.refs[0].remote_head)
+		try:
+			rem.pull(rem.refs[0].remote_head)
+		except:
+			return jsonify({}), 409
 
 		return jsonify({'notes': [x.note for x in result]}), 200 # OK
 	
