@@ -145,6 +145,26 @@ def tree(user, repo, subdir):
 
 	return jsonify(tree)
 
+@app.route('/list/<user>')
+def list(user):
+	"""
+		Get a list of all repos on the server 
+			for this user
+		GET: Returns the list of repos as a dictionary: 
+				{reponame: true}
+			Returns:
+				200 (OK) + JSON
+				404 (Not Found)
+	"""
+
+	root = app.config.get('STORAGE_ROOT')
+	basedir = root + '/' + user
+
+	if not os.path.exists(basedir):
+		return jsonify({}), 404
+	else:
+		return jsonify({x:True for x in os.listdir(basedir)}), 200
+
 @app.route('/<user>/<repo>', 
 	methods=['GET', 'PUT', 'POST', 'DELETE'])
 def repository(user, repo):

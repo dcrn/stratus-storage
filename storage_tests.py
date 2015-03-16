@@ -5,7 +5,7 @@ class StorageTestCase(unittest.TestCase):
 		storage.app.config['TESTING'] = True
 		self.app = storage.app.test_client()
 		self.username = 'dcrn'
-		self.repository = 'testrepo'
+		self.repository = 'test-repo'
 		self.access_token = 'c5a78551cb5c6a19d04b04bbd5fbee66ffe8e3c3'
 
 	def test_git_init_delete(self):
@@ -218,7 +218,7 @@ class StorageTestCase(unittest.TestCase):
 
 	def test_git_pull(self):
 		test_file = 'README.md' # Already in repo
-		test_data = 'hello world\n' # Contents of test_file_a
+		test_data = 'hello world\n' # Contents of test_file
 		test_remote_url = 'https://' + self.username + ':' + self.access_token + '@github.com/' + self.username + '/' + self.repository + '.git'
 		test_remote_name = 'origin'
 		test_url_repo = self.username + '/' + self.repository
@@ -396,6 +396,41 @@ class StorageTestCase(unittest.TestCase):
 		# Delete test repo
 		re = self.app.delete(test_url_repo)
 		assert re.status_code == 200 # OK
+
+	def test_list(self):
+		test_url_list = 'list/' + self.username
+		test_url_repo = self.username + '/' + self.repository
+
+		# Delete if repo exists from failed tests
+		re = self.app.delete(test_url_repo)
+		assert re.status_code in [200, 404]
+
+		# Check repo doesn't exist
+		re = self.app.get(test_url_list)
+		assert re.status_code == 200 or re.status_code == 404
+		j = json.loads(str(re.data, 'utf-8'))
+		assert self.repository not in j
+
+		# Create repo
+		re = self.app.post(test_url_repo, data=json.dumps({}))
+		assert re.status_code == 201 # Created
+
+		# Confirm repo exists
+		re = self.app.get(test_url_list)
+		assert re.status_code == 200
+		j = json.loads(str(re.data, 'utf-8'))
+		assert self.repository in j
+
+		# Delete repo
+		re = self.app.delete(test_url_repo)
+		assert re.status_code == 200
+
+		# Confirm deletion
+		re = self.app.get(test_url_list)
+		assert re.status_code == 200 or re.status_code == 404
+		j = json.loads(str(re.data, 'utf-8'))
+		assert self.repository not in j
+
 		
 	def test_tree(self):
 		test_filename = 'test.txt'
