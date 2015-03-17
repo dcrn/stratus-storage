@@ -483,7 +483,9 @@ def commit(user, repo):
 		except FileNotFoundError:
 			return jsonify({}), 404 # Not Found
 
-	commit = r.index.commit(j['msg']) # Set author / committer?
+	commit = r.index.commit(j['msg'], 
+		author=git.Actor(j['name'], j['email']),
+		committer=git.Actor(j['name'], j['email']))
 
 	return jsonify({'commit': commit.hexsha}), 200 # OK
 
