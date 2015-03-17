@@ -1,9 +1,9 @@
-import storage, json, unittest, time, random, string
+import application, json, unittest, time, random, string
 
 class StorageTestCase(unittest.TestCase):
 	def setUp(self):
-		storage.app.config['TESTING'] = True
-		self.app = storage.app.test_client()
+		application.app.config['TESTING'] = True
+		self.app = application.app.test_client()
 		self.username = 'dcrn'
 		self.repository = 'test-repo'
 		self.access_token = 'c5a78551cb5c6a19d04b04bbd5fbee66ffe8e3c3'
