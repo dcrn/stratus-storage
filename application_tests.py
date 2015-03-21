@@ -398,7 +398,7 @@ class StorageTestCase(unittest.TestCase):
 		assert re.status_code == 200 # OK
 
 	def test_list(self):
-		test_url_list = 'list/' + self.username
+		test_url_list = '/' + self.username
 		test_url_repo = self.username + '/' + self.repository
 
 		# Delete if repo exists from failed tests
