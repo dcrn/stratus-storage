@@ -145,7 +145,7 @@ def tree(user, repo, subdir):
 
 	return jsonify(tree)
 
-@app.route('/list/<user>')
+@app.route('/<user>')
 def list(user):
 	"""
 		Get a list of all repos on the server 
