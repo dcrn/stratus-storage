@@ -163,39 +163,41 @@ def list(user):
 
 	if not os.path.exists(basedir):
 		return jsonify({}), 404
-	else:
-		repos = {}
-		dirs = os.listdir(basedir)
-		for d in dirs:
-			r = None
-			try:
-				r = git.Repo(basedir + '/' + d)
-				repos[d] = 0
-				if (len(r.remotes) > 0):
-					remote = r.remotes[0]
+	
+	repos = {}
+	dirs = os.listdir(basedir)
+	for d in dirs:
+		r = None
+		try:
+			r = git.Repo(basedir + '/' + d)
+			repos[d] = 0
+			if (len(r.remotes) > 0):
+				remote = r.remotes[0]
 
-					if r.head.is_valid(): # Commit exists
-						try:
-							remote.refs
-						except AssertionError:
-							# Remotes without references mean that the 
-							#	remote has no initial commit
-							repos[d] = 1
-						else:
-							repos[d] = len(
-								[1 for x in r.iter_commits(remote.name+'/master..')]
-							)
+				if r.head.is_valid(): # Commit exists
+					try:
+						remote.refs
+					except AssertionError:
+						# Remotes without references mean that the 
+						#	remote has no initial commit
+						repos[d] = 1
+					else:
+						repos[d] = len(
+							[1 for x in r.iter_commits(remote.name+'/master..')]
+						)
 
-			except (git.NoSuchPathError, git.InvalidGitRepositoryError):
-				pass
-		return jsonify(repos), 200
+		except (git.NoSuchPathError, git.InvalidGitRepositoryError):
+			pass
+	return jsonify(repos), 200
 
 @app.route('/<user>/<repo>', 
 	methods=['GET', 'PUT', 'POST', 'DELETE'])
 def repository(user, repo):
 	"""
 		Controls the creation and deletion of local git 
-			repositories using RESTful methods
+			repositories using RESTful methods. Remotes 
+			are specified here which control where the
+			git repository is pushed to / pulled from.
 
 		GET: Returns the remotes of a Repository
 			Returns: 
@@ -483,9 +485,10 @@ def commit(user, repo):
 		except FileNotFoundError:
 			return jsonify({}), 404 # Not Found
 
+	actor = git.Actor(j['name'] or '', j['email'] or '')
 	commit = r.index.commit(j['msg'], 
-		author=git.Actor(j['name'], j['email']),
-		committer=git.Actor(j['name'], j['email']))
+		author=actor,
+		committer=actor)
 
 	return jsonify({'commit': commit.hexsha}), 200 # OK
 
