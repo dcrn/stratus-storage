@@ -66,7 +66,7 @@ class StorageTestCase(unittest.TestCase):
 
 		# Get status before pull
 		re = self.app.get(test_url_status)
-		assert re.status_code == 403 # Forbidden
+		assert re.status_code == 200 # OK
 
 		# Pull repo
 		re = self.app.post(test_url_pull)
@@ -193,7 +193,9 @@ class StorageTestCase(unittest.TestCase):
 			data=json.dumps({
 					'A': [test_file_a, test_file_b], 
 					'R': [], 
-					'msg': 'Unittest ' + time.strftime("%c")
+					'msg': 'Unittest ' + time.strftime("%c"),
+					'name': 'Unit Tests',
+					'email': 'UnitTests@gmail.com'
 				}))
 		assert re.status_code == 200 # OK
 
@@ -310,7 +312,9 @@ class StorageTestCase(unittest.TestCase):
 			data=json.dumps({
 					'A': [test_file],
 					'R': [],
-					'msg': 'Unittest ' + time.strftime("%c")
+					'msg': 'Unittest ' + time.strftime("%c"),
+					'name': 'Unit Test',
+					'email': 'UnitTest@gmail.com'
 				}))
 		assert re.status_code == 200 # OK
 
