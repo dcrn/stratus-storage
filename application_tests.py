@@ -4,6 +4,8 @@ class StorageTestCase(unittest.TestCase):
 	def setUp(self):
 		application.app.config['TESTING'] = True
 		self.app = application.app.test_client()
+
+		# Perform the unit tests on this user and repository, using the specified access token
 		self.username = 'dcrn'
 		self.repository = 'test-repo'
 		self.access_token = 'c5a78551cb5c6a19d04b04bbd5fbee66ffe8e3c3'
