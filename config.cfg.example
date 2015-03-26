@@ -1,1 +1,2 @@
 STORAGE_ROOT = '/var/storage'
+PORT = 8080
